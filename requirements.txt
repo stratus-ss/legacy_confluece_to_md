@@ -1,0 +1,13 @@
+# Production dependencies (also defined in pyproject.toml)
+requests>=2.25.0
+urllib3>=1.26.0
+python-dotenv>=0.19.0
+
+# Test dependencies (for backward compatibility)
+pytest>=6.0.0
+pytest-mock>=3.6.0
+responses>=0.18.0
+
+# Note: For new installations, prefer using:
+# pip install -e .[dev]  # For development dependencies
+# pip install -e .       # For production dependencies only
