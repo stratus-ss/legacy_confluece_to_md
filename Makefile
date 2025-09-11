@@ -109,7 +109,7 @@ venv:
 		echo "📦 Creating virtual environment..."; \
 		python3 -m venv $(VENV_DIR); \
 		echo "📥 Upgrading pip..."; \
-		$(VENV_PIP) install --upgrade pip; \
+		$(VENV_PIP) install -q --upgrade pip; \
 		echo "✅ Virtual environment created"; \
 	else \
 		echo "✅ Virtual environment already exists"; \
@@ -118,13 +118,13 @@ venv:
 # Install development dependencies  
 install-dev: venv
 	@echo "📥 Installing development dependencies..."
-	$(VENV_PIP) install -e .[dev]
+	@$(VENV_PIP) install -q -e .[dev]
 	@echo "✅ Development dependencies installed"
 
 # Install production dependencies only
 install: venv
 	@echo "📥 Installing production dependencies..."
-	$(VENV_PIP) install -e .
+	@$(VENV_PIP) install -q -e .
 	@echo "✅ Production dependencies installed"
 
 # Show current configuration
