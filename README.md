@@ -12,9 +12,11 @@ A comprehensive Python tool for downloading PDFs from Confluence and converting 
 
 ### PDF to Markdown Conversion
 - **Advanced PDF Processing**: Uses Marker library with GPU acceleration support
-- **Intelligent Code Formatting**: Automatic detection and formatting of JSON, YAML, and Bash code blocks
-- **Batch Processing**: Convert multiple PDFs in one operation
-- **Configurable Output**: YAML-based configuration with flexible output options
+- **Intelligent Code Formatting**: Automatic detection and formatting of JSON, YAML, Bash, Python, and Go code blocks
+- **Attachment Processing**: Handles Confluence attachments with organized directory structure
+- **Batch Processing**: Convert multiple PDFs with concurrent processing
+- **Performance Optimization**: Memory management, timeouts, and resource limits
+- **Configurable Output**: Environment-based configuration with extensive customization
 - **CLI Interface**: Full command-line interface with Click framework
 
 ## 📋 Requirements
@@ -49,14 +51,20 @@ pip install -e .[dev]
 
 ## ⚙️ Configuration
 
-### 1. Environment Configuration (Confluence)
-Copy the example environment file and configure your Confluence settings:
+### Environment-based Configuration System
+
+All configuration is managed through environment variables in a `.env` file. This provides secure credential management and flexible deployment options.
+
+### 1. Complete Configuration Setup
+Copy the comprehensive example environment file and configure your settings:
 
 ```bash
 cp env_example .env
 ```
 
-Edit `.env` file:
+The `env_example` file contains all available configuration options with detailed comments. Edit `.env` file to match your environment:
+
+**Confluence Settings:**
 ```bash
 # Confluence Configuration
 CONFLUENCE_URL="https://your-confluence-instance.com"
@@ -70,19 +78,84 @@ CONFLUENCE_VERIFY_SSL="true"
 ```
 
 ### 2. PDF Converter Configuration
-All PDF converter settings are also configured in the `.env` file:
+All PDF converter settings are configured in the `.env` file 
 
 ```bash
 # PDF Converter Configuration
-PDF_OUTPUT_DIR="output/markdown"
-PDF_FORMAT_CODE_BLOCKS="true"
+# Basic converter settings
 PDF_PREFER_GPU="true"
 PDF_LOG_LEVEL="INFO"
+PDF_OUTPUT_FORMAT="markdown"
+PDF_FORMAT_CODE_BLOCKS="true"
+
+# Advanced indentation preservation settings (recommended for better formatting)
+PDF_PRESERVE_INDENTATION="true"  # Preserve original PDF indentation instead of standardizing
+PDF_MIN_CLEANUP="true"           # Apply minimal cleanup when preserving indentation
+PDF_DETECT_LANGUAGES="true"
+PDF_SUPPORTED_LANGUAGES="json,yaml,bash,go,python"
+
+# Output settings
+PDF_OUTPUT_DIR="output/markdown"
+PDF_INCLUDE_METADATA="false"
+
+# Processing settings
 PDF_TIMEOUT="300"
 PDF_MAX_FILE_SIZE_MB="100"
-PDF_SUPPORTED_LANGUAGES="json,yaml,bash"
-PDF_INCLUDE_METADATA="false"
+
+# Confluence integration
+PDF_CAPTURE_ATTACHMENT_METADATA="true"
+PDF_SAVE_METADATA_REPORTS="true"
+
+# Performance settings
+PDF_BATCH_SIZE="10"
+PDF_MEMORY_LIMIT_MB="2048"
+
+# Image processing settings (for enhanced document conversion)
+PDF_ATTACHMENTS_DIR="./output/attachments"
+PDF_IMAGES_DIR="./output/images"
+PDF_MARKDOWN_DIR="./output/markdown"
+PDF_EXTRACT_IMAGES="true"
+PDF_INCLUDE_ATTACHMENTS="true"
+PDF_OPTIMIZE_IMAGES="false"
+PDF_MAX_IMAGE_WIDTH="1200"
+PDF_IMAGE_QUALITY="85"
+PDF_IMAGE_REFERENCE_STYLE="section"
+PDF_GENERATE_ALT_TEXT="true"
+PDF_USE_RELATIVE_PATHS="true"
+PDF_MIN_IMAGE_SIZE="1000"
+PDF_MAX_IMAGE_SIZE="10485760"
+PDF_ALLOWED_IMAGE_FORMATS="png,jpg,jpeg,gif,webp"
+PDF_DEDUPLICATE_IMAGES="true"
+PDF_SIMILARITY_THRESHOLD="0.95"
 ```
+
+#### Configuration Options Explained
+
+**Basic Settings:**
+- `PDF_PREFER_GPU`: Enable GPU acceleration for faster processing (requires CUDA)
+- `PDF_LOG_LEVEL`: Logging verbosity (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- `PDF_FORMAT_CODE_BLOCKS`: Enable intelligent code block formatting
+- `PDF_SUPPORTED_LANGUAGES`: Languages for code block detection and formatting
+
+**Advanced Formatting:**
+- `PDF_PRESERVE_INDENTATION`: Maintain original PDF indentation (recommended)
+- `PDF_MIN_CLEANUP`: Apply minimal text cleanup when preserving indentation
+- `PDF_DETECT_LANGUAGES`: Enable automatic programming language detection
+
+**Performance & Resource Management:**
+- `PDF_TIMEOUT`: Processing timeout in seconds
+- `PDF_MAX_FILE_SIZE_MB`: Maximum PDF file size to process
+- `PDF_BATCH_SIZE`: Number of PDFs to process simultaneously
+- `PDF_MEMORY_LIMIT_MB`: Memory limit for processing operations
+
+**Image & Attachment Processing:**
+- `PDF_EXTRACT_IMAGES`: Extract images from PDFs
+- `PDF_INCLUDE_ATTACHMENTS`: Include Confluence attachments
+- `PDF_OPTIMIZE_IMAGES`: Apply image optimization
+- `PDF_MAX_IMAGE_WIDTH`: Maximum image width for optimization
+- `PDF_DEDUPLICATE_IMAGES`: Remove duplicate images
+
+📝 **Configuration Reference**: See `env_example` for the complete list of all available configuration options with detailed comments and examples.
 
 ⚠️ **Security Note**: The `.env` file contains sensitive credentials and is automatically excluded from version control via `.gitignore`.
 
@@ -350,8 +423,31 @@ PDF_PREFER_GPU="false"
 
 #### Code Block Detection Issues
 - Enable debug logging: Set `PDF_LOG_LEVEL=DEBUG` in .env
-- Check supported languages list: `PDF_SUPPORTED_LANGUAGES="json,yaml,bash,python"`
+- Check supported languages list: `PDF_SUPPORTED_LANGUAGES="json,yaml,bash,go,python"`
 - Verify input PDF quality and text extraction
+- Try different indentation settings: `PDF_PRESERVE_INDENTATION=true/false`
+
+#### Indentation and Formatting Issues
+```bash
+# For better code readability (recommended)
+PDF_PRESERVE_INDENTATION="true"
+PDF_MIN_CLEANUP="true"
+
+# For standardized formatting
+PDF_PRESERVE_INDENTATION="false"
+PDF_MIN_CLEANUP="false"
+```
+
+#### Performance Issues
+```bash
+# Reduce resource usage
+PDF_BATCH_SIZE="5"
+PDF_MEMORY_LIMIT_MB="1024"
+PDF_MAX_FILE_SIZE_MB="50"
+
+# Enable GPU acceleration (if available)
+PDF_PREFER_GPU="true"
+```
 
 #### Python 3.13 Compatibility
 If you encounter dataclass-related errors with Python 3.13:
@@ -366,11 +462,21 @@ This has been resolved in recent versions. Ensure you're using the latest versio
 - Use smaller page hierarchies for initial testing
 - Enable SSL verification only when needed
 - Consider network latency for large downloads
+- Separate PDF and attachment directories for better organization
 
 ### PDF Conversion
-- Enable GPU acceleration for faster processing
-- Process smaller batches for memory-constrained systems
-- Use appropriate timeout settings for large files
+- **Enable GPU acceleration** for 3-5x faster processing: `PDF_PREFER_GPU="true"`
+- **Optimize batch processing**: Start with `PDF_BATCH_SIZE="5"`, increase based on system resources
+- **Memory management**: Set appropriate `PDF_MEMORY_LIMIT_MB` based on available RAM
+- **Indentation preservation**: Use `PDF_PRESERVE_INDENTATION="true"` for better code readability
+- **Language detection**: Fine-tune `PDF_SUPPORTED_LANGUAGES` to your specific needs
+- **Large file handling**: Adjust `PDF_TIMEOUT` and `PDF_MAX_FILE_SIZE_MB` for your content
+
+### System Recommendations
+- **RAM**: 8GB+ recommended for large PDF processing
+- **GPU**: CUDA-compatible GPU significantly improves processing speed
+- **Storage**: SSD recommended for faster I/O operations
+- **CPU**: Multi-core processor benefits batch processing
 
 ## 📄 License
 
