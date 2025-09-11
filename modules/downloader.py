@@ -19,6 +19,7 @@ class ConfluenceDownloader:
         password: str,
         space_key: str,
         output_dir: str,
+        attachments_dir: Optional[str] = None,
         verify_ssl: bool = True,
     ) -> None:
         self.confluence_url = confluence_url
@@ -26,6 +27,8 @@ class ConfluenceDownloader:
         self.password = password
         self.space_key = space_key
         self.output_dir = output_dir
+        # If no separate attachments directory is provided, use output_dir for backward compatibility
+        self.attachments_dir = attachments_dir or output_dir
         self.verify_ssl = verify_ssl
 
     def get_parent_page_id(self, page_title: str) -> Optional[str]:
@@ -116,7 +119,7 @@ class ConfluenceDownloader:
                 )
                 if attachment_response.status_code == 200:
                     attachment_filename = f"{safe_title}_{attachment['title']}"
-                    with open(f"{self.output_dir}/{attachment_filename}", "wb") as f:
+                    with open(f"{self.attachments_dir}/{attachment_filename}", "wb") as f:
                         for chunk in attachment_response.iter_content(chunk_size=8192):
                             f.write(chunk)
                     print(f"Downloaded attachment: {attachment_filename}")
@@ -128,6 +131,7 @@ class ConfluenceDownloader:
     def run(self, parent_page_title: str) -> bool:
         """Main execution logic from the original __main__ block"""
         os.makedirs(self.output_dir, exist_ok=True)
+        os.makedirs(self.attachments_dir, exist_ok=True)
         print("Fetching parent page ID...")
         parent_page_id = self.get_parent_page_id(parent_page_title)
         if not parent_page_id:

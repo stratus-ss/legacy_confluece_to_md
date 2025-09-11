@@ -111,6 +111,14 @@ addopts = [
     "--cov-report=html",
     "--cov-fail-under=60"
 ]
+filterwarnings = [
+    # Ignore pydantic v2.0 deprecation warnings from external libraries
+    "ignore:Support for class-based.*config.*is deprecated:DeprecationWarning",
+    # Ignore multiprocessing fork warnings (common in modern Python)
+    "ignore:This process.*is multi-threaded.*fork.*may lead to deadlocks:DeprecationWarning",
+    # Ignore BeautifulSoup warnings from marker library
+    "ignore:The input passed in on this line looks more like a filename:bs4.MarkupResemblesLocatorWarning",
+]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests requiring cluster access",
@@ -161,6 +169,8 @@ show_error_codes = true
 module = [
     "responses.*",
     "modules.downloader",
+    "marker.*",
+    "torch.*",
 ]
 ignore_missing_imports = true
 disable_error_code = ["arg-type"]

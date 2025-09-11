@@ -49,11 +49,8 @@ typecheck: install-dev
 # Run formatter, linter, and type checker
 fix: format lint typecheck
 
-# Run tests with type checking
+# Run tests only
 test: install-dev
-	@echo "🔧 Running type checking with mypy..."
-	$(MYPY_CMD) $(SOURCE_DIR)
-	@echo "✅ Type checking completed"
 	@echo "🧪 Running tests with pytest..."
 	$(PYTEST_CMD) $(TESTS_DIR)/ -v
 	@echo "✅ All tests completed"
