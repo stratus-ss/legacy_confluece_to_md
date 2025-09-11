@@ -14,8 +14,11 @@ PDF_PREFER_GPU="true"
 PDF_LOG_LEVEL="INFO"
 PDF_OUTPUT_FORMAT="markdown"
 PDF_FORMAT_CODE_BLOCKS="true"
+# New indentation preservation settings (recommended for better formatting)
+PDF_PRESERVE_INDENTATION="true"  # Preserve original PDF indentation instead of standardizing
+PDF_MIN_CLEANUP="true"           # Apply minimal cleanup when preserving indentation
 PDF_DETECT_LANGUAGES="true"
-PDF_SUPPORTED_LANGUAGES="json,yaml,bash"
+PDF_SUPPORTED_LANGUAGES="json,yaml,bash,go,python"
 
 # Output settings
 PDF_OUTPUT_DIR="output/markdown"

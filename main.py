@@ -148,10 +148,20 @@ def convert(ctx, pdf_source, output_dir, pattern):
     
     output_dir_path.mkdir(parents=True, exist_ok=True)
     
-    # Setup converter
-    config_prefer_gpu = pdf_config.get("converter", {}).get("prefer_gpu", True)
+    # Setup converter with full configuration
+    converter_config = pdf_config.get("converter", {})
+    config_prefer_gpu = converter_config.get("prefer_gpu", True)
     prefer_gpu = config_prefer_gpu and not ctx.obj['cpu_only']
-    converter = PDFToMarkdownConverter(prefer_gpu=prefer_gpu)
+    
+    # Use new indentation preservation settings
+    preserve_indentation = converter_config.get("preserve_indentation", True)
+    min_cleanup = converter_config.get("min_cleanup", True)
+    
+    converter = PDFToMarkdownConverter(
+        prefer_gpu=prefer_gpu,
+        preserve_indentation=preserve_indentation,
+        min_cleanup=min_cleanup
+    )
     
     click.echo("🔄 Starting PDF to Markdown conversion...")
     click.echo(f"📁 Source: {pdf_source_path}")
@@ -277,10 +287,20 @@ def workflow(ctx, parent_page, space, confluence_output, attachments_dir, markdo
         
         click.echo(f"📊 Found {len(pdf_files)} PDF files to convert")
         
-        # Setup converter
-        config_prefer_gpu = pdf_config.get("converter", {}).get("prefer_gpu", True)
+        # Setup converter with full configuration
+        converter_config = pdf_config.get("converter", {})
+        config_prefer_gpu = converter_config.get("prefer_gpu", True)
         prefer_gpu = config_prefer_gpu and not ctx.obj['cpu_only']
-        converter = PDFToMarkdownConverter(prefer_gpu=prefer_gpu)
+        
+        # Use new indentation preservation settings
+        preserve_indentation = converter_config.get("preserve_indentation", True)
+        min_cleanup = converter_config.get("min_cleanup", True)
+        
+        converter = PDFToMarkdownConverter(
+            prefer_gpu=prefer_gpu,
+            preserve_indentation=preserve_indentation,
+            min_cleanup=min_cleanup
+        )
         
         results = converter.batch_convert(pdf_files, markdown_output_path)
         
@@ -326,17 +346,34 @@ def info(ctx):
     processing_config = pdf_config.get("processing", {})
     
     click.echo(f"Code formatting: {'✅ Enabled' if converter_config.get('format_code_blocks') else '❌ Disabled'}")
+    click.echo(f"Indentation preservation: {'✅ Preserve original' if converter_config.get('preserve_indentation', True) else '❌ Standardize'}")
+    click.echo(f"Minimal cleanup: {'✅ Enabled' if converter_config.get('min_cleanup', True) else '❌ No cleanup'}")
     click.echo(f"GPU acceleration: {'✅ Preferred' if converter_config.get('prefer_gpu') else '❌ CPU Only'}")
     click.echo(f"Log level: {converter_config.get('log_level', 'INFO')}")
     click.echo(f"Markdown Output: {output_config.get('output_dir', 'output/markdown')}")
     click.echo(f"Timeout: {processing_config.get('timeout', 300)}s")
     click.echo(f"Max file size: {processing_config.get('max_file_size_mb', 100)}MB")
     
+    # Show indentation processing method
+    if converter_config.get('preserve_indentation', True):
+        click.echo(f"📝 Indentation: Original PDF formatting preserved (recommended)")
+    else:
+        click.echo(f"📝 Indentation: Standardized formatting applied")
+    
     # Show GPU info if available
     try:
         config_prefer_gpu = converter_config.get("prefer_gpu", True)
         prefer_gpu = config_prefer_gpu and not ctx.obj['cpu_only']
-        converter = PDFToMarkdownConverter(prefer_gpu=prefer_gpu)
+        
+        # Use new indentation preservation settings for info display
+        preserve_indentation = converter_config.get("preserve_indentation", True)
+        min_cleanup = converter_config.get("min_cleanup", True)
+        
+        converter = PDFToMarkdownConverter(
+            prefer_gpu=prefer_gpu,
+            preserve_indentation=preserve_indentation,
+            min_cleanup=min_cleanup
+        )
         
         click.echo(f"\n🖥️  SYSTEM INFORMATION:")
         click.echo(f"Detected device: {converter.device}")

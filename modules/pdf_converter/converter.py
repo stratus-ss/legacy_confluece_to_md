@@ -25,11 +25,11 @@ except ImportError:
 
 try:
     from .code_formatter import CodeFormatter
-    from .image_manager import ImageManager
+    from .marker_cleaner import MarkerOutputCleaner
 except ImportError:
     # Handle direct execution
     from code_formatter import CodeFormatter  # type: ignore
-    from image_manager import ImageManager  # type: ignore
+    from marker_cleaner import MarkerOutputCleaner  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -47,32 +47,31 @@ class PDFToMarkdownConverter:
         self,
         config_path: Optional[str] = None,
         prefer_gpu: bool = True,
-        attachments_dir: Union[str, Path] = "./output/attachments",
-        images_dir: Union[str, Path] = "./output/images",
-        markdown_dir: Union[str, Path] = "./output/markdown",
+        preserve_indentation: bool = True,
+        min_cleanup: bool = True,
     ):
         """Initialize the converter
 
         Args:
             config_path: Optional path to configuration file (not implemented yet)
             prefer_gpu: Whether to try GPU acceleration first (defaults to True)
-            attachments_dir: Directory containing Confluence attachments
-            images_dir: Directory for extracted/processed images
-            markdown_dir: Directory where markdown files will be saved
+            preserve_indentation: Whether to preserve original PDF indentation (True) or standardize (False)
+            min_cleanup: If preserve_indentation=True, whether to apply minimal cleanup
         """
         self.config_path = config_path
         self.prefer_gpu = prefer_gpu
+        self.preserve_indentation = preserve_indentation
+        self.min_cleanup = min_cleanup
         self.device = self._detect_device()
         self.converter = None  # type: ignore
-        self.formatter = CodeFormatter()
-
-        # Image management (always enabled)
-        self.image_manager = ImageManager(
-            attachments_dir=attachments_dir, images_dir=images_dir, markdown_dir=markdown_dir
+        self.formatter = CodeFormatter(
+            preserve_indentation=preserve_indentation,
+            min_cleanup=min_cleanup
         )
-        self.page_attachments: Dict[str, List[str]] = {}
+        self.marker_cleaner = MarkerOutputCleaner()
 
-        logger.info("PDF converter initialized with comprehensive image management")
+        indentation_mode = "preserved" if preserve_indentation else "standardized"
+        logger.info(f"PDF converter initialized with {indentation_mode} indentation formatting")
 
     def _detect_device(self) -> str:
         """Detect the best available device for processing
@@ -161,34 +160,6 @@ class PDFToMarkdownConverter:
 
         return formatted_content
 
-    def register_page_attachments(
-        self, page_title: str, page_id: str, attachments_data: List[Dict], downloaded_filenames: List[str]
-    ) -> None:
-        """Register attachment metadata and downloaded files for a page
-
-        Args:
-            page_title: Title of the Confluence page
-            page_id: Confluence page ID
-            attachments_data: Raw attachment data from Confluence API
-            downloaded_filenames: List of actually downloaded attachment filenames
-        """
-        try:
-            # Register metadata with ImageManager
-            self.image_manager.register_attachment_metadata(
-                page_id=page_id, page_title=page_title, attachments_data=attachments_data
-            )
-
-            # Track downloaded attachments for this page
-            self.page_attachments[page_title] = downloaded_filenames
-
-            image_count = len([f for f in downloaded_filenames if self.image_manager._is_image_file(Path(f))])
-
-            logger.info(
-                f"Registered {len(downloaded_filenames)} attachments " f"({image_count} images) for page: {page_title}"
-            )
-
-        except Exception as e:
-            logger.error(f"Failed to register attachments for {page_title}: {e}")
 
     def convert_pdf(
         self,
@@ -225,36 +196,22 @@ class PDFToMarkdownConverter:
             # Load converter if needed
             self._load_converter()
 
-            # Convert using Marker - CAPTURE IMAGES
+            # Convert using Marker
             assert self.converter is not None, "Converter not initialized"
             rendered = self.converter(str(pdf_path))
             full_text, _, images = text_from_rendered(rendered)
 
             logger.info(f"Conversion completed. Generated {len(full_text)} characters")
-
-            # Process extracted images from PDF
-            extracted_image_refs = []
             if images:
-                logger.info(f"Processing {len(images)} extracted images")
-                extracted_image_refs = self.image_manager.process_extracted_images(
-                    page_title=page_title, extracted_images=images
-                )
+                logger.info(f"Note: {len(images)} images were found but image processing is disabled")
 
-            # Process Confluence attachments for this page
-            attachment_image_refs = []
-            if page_title in self.page_attachments:
-                attachment_image_refs = self.image_manager.create_attachment_references(
-                    page_title=page_title, downloaded_attachments=self.page_attachments[page_title]
-                )
+            # Clean up Marker formatting issues BEFORE code formatting
+            full_text = self.marker_cleaner.clean_marker_output(full_text)
+            logger.info("Applied Marker output cleaning to fix YAML and structure issues")
 
-            # Apply code block formatting
+            # Apply code block formatting with preserved indentation
             full_text = self._format_code_blocks(full_text)
-            logger.info("Code block formatting applied")
-
-            # Insert image references into markdown
-            full_text_with_images = self.image_manager.insert_image_references(
-                markdown_content=full_text, page_title=page_title
-            )
+            logger.info("Code block formatting applied with preserved indentation")
 
             # Save to file if output path specified
             if output_path:
@@ -262,19 +219,18 @@ class PDFToMarkdownConverter:
                 output_path.parent.mkdir(parents=True, exist_ok=True)
 
                 with open(output_path, "w", encoding="utf-8") as f:
-                    f.write(full_text_with_images)
+                    f.write(full_text)
                 logger.info(f"Markdown saved to: {output_path}")
 
-            # Generate comprehensive summary
+            # Generate simple summary
             summary = {
-                "extracted_images": len(extracted_image_refs),
-                "attachment_images": len(attachment_image_refs),
-                "total_images": len(extracted_image_refs) + len(attachment_image_refs),
-                "image_manager_stats": self.image_manager.get_summary(),
+                "characters_converted": len(full_text),
+                "images_detected": len(images) if images else 0,
+                "note": "Image processing disabled - images detected but not processed"
             }
 
-            logger.info(f"Image processing summary: {summary}")
-            return full_text_with_images, summary
+            logger.info(f"Conversion summary: {summary}")
+            return full_text, summary
 
         except Exception as e:
             error_msg = f"Failed to convert PDF {pdf_path}: {str(e)}"
@@ -284,7 +240,7 @@ class PDFToMarkdownConverter:
     def batch_convert(
         self, pdf_list: List[Union[str, Path]], output_dir: Union[str, Path], page_titles: Optional[List[str]] = None
     ) -> Dict[str, Any]:
-        """Convert multiple PDFs to markdown with comprehensive image handling
+        """Convert multiple PDFs to markdown
 
         Args:
             pdf_list: List of PDF file paths
@@ -292,7 +248,7 @@ class PDFToMarkdownConverter:
             page_titles: Optional list of page titles (must match pdf_list length)
 
         Returns:
-            Dictionary with detailed results including image statistics
+            Dictionary with conversion results
         """
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -301,7 +257,7 @@ class PDFToMarkdownConverter:
         results: Dict[str, Any] = {
             "success": [],
             "failed": [],
-            "image_stats": {"total_extracted": 0, "total_attachments": 0, "pages_with_images": 0},
+            "stats": {"total_characters": 0, "total_images_detected": 0},
         }
 
         for idx, pdf_path in enumerate(pdf_list):
@@ -314,8 +270,8 @@ class PDFToMarkdownConverter:
                 if page_titles and idx < len(page_titles):
                     page_title = page_titles[idx]
 
-                # Convert with comprehensive image handling
-                markdown_content, image_summary = self.convert_pdf(
+                # Convert PDF to markdown
+                markdown_content, conversion_summary = self.convert_pdf(
                     pdf_path=pdf_path, output_path=output_file, page_title=page_title
                 )
 
@@ -324,38 +280,28 @@ class PDFToMarkdownConverter:
                         "pdf_path": str(pdf_path),
                         "output_path": str(output_file),
                         "page_title": page_title or pdf_path.stem,
-                        "image_summary": image_summary,
+                        "summary": conversion_summary,
                     }
                 )
 
-                # Aggregate image statistics
-                results["image_stats"]["total_extracted"] += image_summary["extracted_images"]
-                results["image_stats"]["total_attachments"] += image_summary["attachment_images"]
-                if image_summary["total_images"] > 0:
-                    results["image_stats"]["pages_with_images"] += 1
+                # Aggregate statistics
+                results["stats"]["total_characters"] += conversion_summary.get("characters_converted", 0)
+                results["stats"]["total_images_detected"] += conversion_summary.get("images_detected", 0)
 
             except PDFConversionError as e:
                 logger.error(f"Failed to convert {pdf_path}: {e}")
                 results["failed"].append({"pdf_path": str(pdf_path), "error": str(e)})
 
-        # Log comprehensive results
+        # Log results
         total_success = len(results["success"])
         total_failed = len(results["failed"])
 
         logger.info(f"Batch conversion completed: Success: {total_success}, Failed: {total_failed}")
-        logger.info(f"  Total extracted images: {results['image_stats']['total_extracted']}")
-        logger.info(f"  Total attachment images: {results['image_stats']['total_attachments']}")
-        logger.info(f"  Pages with images: {results['image_stats']['pages_with_images']}")
+        logger.info(f"  Total characters converted: {results['stats']['total_characters']}")
+        logger.info(f"  Total images detected: {results['stats']['total_images_detected']}")
 
         return results
 
-    def get_image_manager(self) -> ImageManager:
-        """Get access to the underlying ImageManager for advanced operations
-
-        Returns:
-            ImageManager instance
-        """
-        return self.image_manager
 
 
 def main():

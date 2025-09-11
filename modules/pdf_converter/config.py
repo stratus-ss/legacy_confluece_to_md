@@ -85,9 +85,11 @@ class ConverterConfig:
 
     # Code formatting settings
     format_code_blocks: bool = field(default_factory=lambda: _get_bool_env("PDF_FORMAT_CODE_BLOCKS", True))
+    preserve_indentation: bool = field(default_factory=lambda: _get_bool_env("PDF_PRESERVE_INDENTATION", True))
+    min_cleanup: bool = field(default_factory=lambda: _get_bool_env("PDF_MIN_CLEANUP", True))
     detect_languages: bool = field(default_factory=lambda: _get_bool_env("PDF_DETECT_LANGUAGES", True))
     supported_languages: List[str] = field(
-        default_factory=lambda: _get_list_env("PDF_SUPPORTED_LANGUAGES", ["json", "yaml", "bash"])
+        default_factory=lambda: _get_list_env("PDF_SUPPORTED_LANGUAGES", ["json", "yaml", "bash", "go", "python"])
     )
 
     # Output settings
@@ -168,6 +170,8 @@ def load_config(
         return {
             "converter": {
                 "format_code_blocks": os.getenv("PDF_FORMAT_CODE_BLOCKS", "true").lower() == "true",
+                "preserve_indentation": os.getenv("PDF_PRESERVE_INDENTATION", "true").lower() == "true",
+                "min_cleanup": os.getenv("PDF_MIN_CLEANUP", "true").lower() == "true",
                 "prefer_gpu": os.getenv("PDF_PREFER_GPU", "true").lower() == "true",
                 "supported_languages": supported_languages,
                 "log_level": os.getenv("PDF_LOG_LEVEL", "INFO").upper(),
