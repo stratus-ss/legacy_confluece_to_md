@@ -19,7 +19,7 @@ A comprehensive Python tool for downloading PDFs from Confluence and converting 
 
 ## 📋 Requirements
 
-- Python 3.9+
+- Python 3.9+ (tested up to Python 3.13)
 - Virtual environment (recommended)
 - Access to a Confluence Server or DataCenter instance
 - Optional: CUDA-compatible GPU for faster PDF processing
@@ -210,7 +210,7 @@ legacy_confluece_to_md/
 │   ├── downloader.py              # ConfluenceDownloader class
 │   └── pdf_converter/             # PDF to Markdown conversion
 │       ├── __init__.py
-│       ├── config.py             # Configuration utilities
+│       ├── config.py             # Unified configuration system (legacy + enhanced)
 │       ├── converter.py           # Main conversion logic (Marker)
 │       └── code_formatter.py      # Code block formatting
 ├── tests/                         # Comprehensive test suite
@@ -230,47 +230,6 @@ legacy_confluece_to_md/
 ├── .gitignore                   # Git exclusions
 └── README.md                    # This file
 ```
-
-## 🔄 Migration Guide for Existing Users
-
-### Attachment Directory Changes
-
-**What Changed**: Starting with version 2.0, attachments are now saved to a separate `attachments` directory instead of the `pdfs` directory.
-
-**New Structure**:
-```
-output/
-├── pdfs/           # PDF files only
-├── attachments/    # All other attachments (images, documents, etc.)
-└── markdown/       # Converted markdown files
-```
-
-**Migration Steps**:
-
-1. **Add new environment variable** to your `.env` file:
-   ```bash
-   CONFLUENCE_ATTACHMENTS_DIR="./output/attachments"
-   ```
-
-2. **Move existing attachments** (optional):
-   ```bash
-   # Create new attachments directory
-   mkdir -p output/attachments
-   
-   # Move non-PDF files from pdfs to attachments directory
-   find output/pdfs -type f ! -name "*.pdf" -exec mv {} output/attachments/ \;
-   ```
-
-3. **Update CLI commands** (if using custom directories):
-   ```bash
-   # Old command
-   python main.py download --output-dir ./my_pdfs
-   
-   # New command
-   python main.py download --output-dir ./my_pdfs --attachments-dir ./my_attachments
-   ```
-
-**Backward Compatibility**: Existing configurations without `CONFLUENCE_ATTACHMENTS_DIR` will continue to work by defaulting to the same directory as PDFs.
 
 ## 🔧 Technical Details
 
@@ -393,6 +352,13 @@ PDF_PREFER_GPU="false"
 - Enable debug logging: Set `PDF_LOG_LEVEL=DEBUG` in .env
 - Check supported languages list: `PDF_SUPPORTED_LANGUAGES="json,yaml,bash,python"`
 - Verify input PDF quality and text extraction
+
+#### Python 3.13 Compatibility
+If you encounter dataclass-related errors with Python 3.13:
+```bash
+ValueError: mutable default <class 'list'> for field supported_languages is not allowed
+```
+This has been resolved in recent versions. Ensure you're using the latest version of the codebase.
 
 ## 🚀 Performance Tips
 

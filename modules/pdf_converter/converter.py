@@ -64,10 +64,7 @@ class PDFToMarkdownConverter:
         self.min_cleanup = min_cleanup
         self.device = self._detect_device()
         self.converter = None  # type: ignore
-        self.formatter = CodeFormatter(
-            preserve_indentation=preserve_indentation,
-            min_cleanup=min_cleanup
-        )
+        self.formatter = CodeFormatter(preserve_indentation=preserve_indentation, min_cleanup=min_cleanup)
         self.marker_cleaner = MarkerOutputCleaner()
 
         indentation_mode = "preserved" if preserve_indentation else "standardized"
@@ -160,7 +157,6 @@ class PDFToMarkdownConverter:
 
         return formatted_content
 
-
     def convert_pdf(
         self,
         pdf_path: Union[str, Path],
@@ -226,7 +222,7 @@ class PDFToMarkdownConverter:
             summary = {
                 "characters_converted": len(full_text),
                 "images_detected": len(images) if images else 0,
-                "note": "Image processing disabled - images detected but not processed"
+                "note": "Image processing disabled - images detected but not processed",
             }
 
             logger.info(f"Conversion summary: {summary}")
@@ -301,7 +297,6 @@ class PDFToMarkdownConverter:
         logger.info(f"  Total images detected: {results['stats']['total_images_detected']}")
 
         return results
-
 
 
 def main():

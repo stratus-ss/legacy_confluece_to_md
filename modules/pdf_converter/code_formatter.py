@@ -22,7 +22,7 @@ class CodeFormatter:
 
     def __init__(self, preserve_indentation: bool = False, min_cleanup: bool = True):
         """Initialize the code formatter
-        
+
         Args:
             preserve_indentation: If True, preserve original PDF indentation instead of standardizing
             min_cleanup: If True and preserve_indentation=True, apply minimal cleanup
@@ -275,54 +275,56 @@ class CodeFormatter:
     def format_go(self, content: str) -> str:
         """
         Go formatter following Google Go Style Guide and gofmt conventions
-        
+
         Key principles from Context7:
         - Use gofmt-compatible formatting
         - Match brace indentation in literals
         - Keep function calls on single line when possible
         - Use tabs for indentation (gofmt standard)
-        
+
         Args:
             content: Raw Go code content
-            
+
         Returns:
             Formatted Go code following gofmt standards
         """
         try:
-            lines = content.split('\n')
+            lines = content.split("\n")
             formatted_lines = []
             indent_level = 0
-            
+
             for line in lines:
                 stripped = line.strip()
-                
+
                 if not stripped:
-                    formatted_lines.append('')
+                    formatted_lines.append("")
                     continue
-                    
+
                 # Handle comments - preserve but apply indentation
-                if stripped.startswith('//'):
-                    formatted_lines.append('\t' * indent_level + stripped)
+                if stripped.startswith("//"):
+                    formatted_lines.append("\t" * indent_level + stripped)
                     continue
-                    
+
                 # Decrease indent for closing braces
-                if stripped in ['}', '}):', '},', '];']:
+                if stripped in ["}", "}):", "},", "];"]:
                     indent_level = max(0, indent_level - 1)
-                    
+
                 # Apply tab indentation (Go standard)
-                formatted_line = '\t' * indent_level + stripped
+                formatted_line = "\t" * indent_level + stripped
                 formatted_lines.append(formatted_line)
-                
+
                 # Increase indent after opening braces, function declarations, control structures
-                if (stripped.endswith('{') or 
-                    (stripped.endswith('(') and len(stripped) > 10) or  # Long function calls
-                    stripped.endswith('[') or
-                    re.match(r'^(if|for|func|switch|select|type|struct)\b.*{$', stripped) or
-                    re.match(r'^(func)\b.*\($', stripped)):  # Function parameters spread across lines
+                if (
+                    stripped.endswith("{")
+                    or (stripped.endswith("(") and len(stripped) > 10)  # Long function calls
+                    or stripped.endswith("[")
+                    or re.match(r"^(if|for|func|switch|select|type|struct)\b.*{$", stripped)
+                    or re.match(r"^(func)\b.*\($", stripped)
+                ):  # Function parameters spread across lines
                     indent_level += 1
-                    
-            return '\n'.join(formatted_lines)
-            
+
+            return "\n".join(formatted_lines)
+
         except Exception as e:
             logger.warning(f"Failed to format Go: {e}")
             return content
@@ -330,57 +332,57 @@ class CodeFormatter:
     def format_python(self, content: str) -> str:
         """
         Python formatter following PEP 8 standards from Context7
-        
+
         Key principles:
         - Use 4 spaces for indentation (never tabs)
         - Hanging indents should add a level (4 spaces)
         - No spaces inside parentheses/brackets/braces
         - Proper continuation line alignment
-        
+
         Args:
             content: Raw Python code content
-            
+
         Returns:
             PEP 8 compliant formatted Python code
         """
         try:
-            lines = content.split('\n')
+            lines = content.split("\n")
             formatted_lines = []
             indent_level = 0
-            
+
             for line_idx, line in enumerate(lines):
                 stripped = line.strip()
-                
+
                 if not stripped:
-                    formatted_lines.append('')
+                    formatted_lines.append("")
                     continue
-                    
+
                 # Handle comments - preserve but apply indentation
-                if stripped.startswith('#'):
-                    formatted_lines.append('    ' * indent_level + stripped)
+                if stripped.startswith("#"):
+                    formatted_lines.append("    " * indent_level + stripped)
                     continue
-                    
+
                 # Handle dedenting keywords (they go back one level)
-                if re.match(r'^(else|elif|except|finally|case)\b', stripped):
+                if re.match(r"^(else|elif|except|finally|case)\b", stripped):
                     # These keywords dedent one level from current
                     indent_level = max(0, indent_level - 1)
-                elif stripped in [')', ']', '}']:
+                elif stripped in [")", "]", "}"]:
                     # Closing brackets dedent
                     indent_level = max(0, indent_level - 1)
-                    
+
                 # Apply current indentation level
-                formatted_line = '    ' * indent_level + stripped
+                formatted_line = "    " * indent_level + stripped
                 formatted_lines.append(formatted_line)
-                
+
                 # Increase indent after lines ending with colon (blocks)
-                if stripped.endswith(':') and not stripped.startswith('#'):
+                if stripped.endswith(":") and not stripped.startswith("#"):
                     indent_level += 1
                 # Also handle opening brackets
-                elif stripped.endswith('(') or stripped.endswith('[') or stripped.endswith('{'):
+                elif stripped.endswith("(") or stripped.endswith("[") or stripped.endswith("{"):
                     indent_level += 1
-                    
-            return '\n'.join(formatted_lines)
-            
+
+            return "\n".join(formatted_lines)
+
         except Exception as e:
             logger.warning(f"Failed to format Python: {e}")
             return content
@@ -398,7 +400,7 @@ class CodeFormatter:
         # For programming languages, ALWAYS apply proper formatting for readability
         # Even in preservation mode, code blocks benefit from standardized formatting
         detected_language = language if language else self.detect_language(content)
-        
+
         # Apply language-specific formatting if we recognize the language
         if detected_language in ["bash", "python", "go", "json", "yaml"]:
             logger.debug(f"Applying {detected_language} formatter (override preservation for code blocks)")
@@ -407,7 +409,7 @@ class CodeFormatter:
         elif self.preserve_indentation and self.indentation_preserver:
             # Only use preservation for unrecognized content/text
             return self.indentation_preserver.format_with_preserved_indentation(content, language)
-        
+
         # Fall back to original standardized formatting
         # If language is provided, try it first, but detect if it fails
         original_language = language
@@ -463,7 +465,10 @@ class CodeFormatter:
                 # No formatting for truly unknown languages
                 formatted_content = content
 
-        logger.debug(f"Formatted code block ({'preserved' if self.preserve_indentation else 'standardized'}): {original_language} -> {final_language}")
+        logger.debug(
+            f"Formatted code block ({'preserved' if self.preserve_indentation else 'standardized'}): "
+            f"{original_language} -> {final_language}"
+        )
         return formatted_content, final_language
 
 
